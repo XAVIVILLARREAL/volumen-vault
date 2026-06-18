@@ -1,0 +1,36 @@
+services:
+  volumen-vault:
+    build: .
+    image: volumen-vault:latest
+    container_name: volumen-vault
+    restart: unless-stopped
+    # CRITICAL: acceso al socket de Docker del host para listar y montar volúmenes
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Estado local del vault (por si quieres inspección manual desde el host)
+      - ./state:/app/state
+    ports:
+      # API REST expuesta solo localmente. Si la quieres pública, ponla tras un túnel.
+      - "127.0.0.1:8095:8095"
+    environment:
+      # ─── pCloud auth ───
+      - PCLOUD_EMAIL=${PCLOUD_EMAIL}
+      - PCLOUD_PASSWORD=${PCLOUD_PASSWORD}
+      - PCLOUD_REGION=${PCLOUD_REGION:-us}
+      - PCLOUD_VAULT_FOLDER_ID=${PCLOUD_VAULT_FOLDER_ID}
+      # ─── Scheduler ───
+      - SNAPSHOT_CRON=${SNAPSHOT_CRON:-0 2 * * *}
+      - RETENTION_SNAPSHOTS=${RETENTION_SNAPSHOTS:-30}
+      # ─── Filter ───
+      - INCLUDE_PATTERN=${INCLUDE_PATTERN:-.*}
+      - EXCLUDE_PATTERN=${EXCLUDE_PATTERN:-^($|.tmp$|.cache$)}
+      # ─── API ───
+      - API_PORT=${API_PORT:-8095}
+      - API_KEY=${API_KEY:-}
+      - DEBUG=${DEBUG:-false}
+    networks:
+      - vault-net
+
+networks:
+  vault-net:
+    driver: bridge
