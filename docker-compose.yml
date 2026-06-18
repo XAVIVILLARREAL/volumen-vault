@@ -16,6 +16,7 @@ services:
       # ─── pCloud auth ───
       - PCLOUD_EMAIL=${PCLOUD_EMAIL}
       - PCLOUD_PASSWORD=${PCLOUD_PASSWORD}
+      - PCLOUD_AUTH_TOKEN=${PCLOUD_AUTH_TOKEN:-}
       - PCLOUD_REGION=${PCLOUD_REGION:-us}
       - PCLOUD_VAULT_FOLDER_ID=${PCLOUD_VAULT_FOLDER_ID}
       # ─── Scheduler ───
