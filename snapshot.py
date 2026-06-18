@@ -80,20 +80,39 @@ class PCloud:
         self.email = email
         self.password = password
         self.token: Optional[str] = None
+        # Si hay un token pre-cacheado en env var (PCLOUD_AUTH_TOKEN), usarlo directo
+        cached = os.environ.get("PCLOUD_AUTH_TOKEN", "").strip()
+        if cached:
+            self.token = cached
+            log.info(f"✓ Usando PCLOUD_AUTH_TOKEN pre-cacheado (len={len(cached)})")
+            return
         if not email or not password:
-            raise PCloudError("PCLOUD_EMAIL y PCLOUD_PASSWORD son requeridos (env vars)")
+            raise PCloudError(
+                "PCLOUD_EMAIL/PCLOUD_PASSWORD o PCLOUD_AUTH_TOKEN requeridos (env vars)"
+            )
         self._authenticate()
 
     def _authenticate(self):
         r = self._call("getdigest", {"username": self.email}, authless=True)
         digest = r["digest"]
-        r = self._call(
-            "login",
-            {"username": self.email, "digest": digest, "password": self.password, "getauth": 1},
-            authless=True,
+        # Intentar varios métodos en orden
+        last_err = None
+        for ep, params in [
+            ("login", {"username": self.email, "digest": digest, "password": self.password, "getauth": 1}),
+            ("userinfo", {"username": self.email, "digest": digest, "password": self.password, "getauth": 1}),
+        ]:
+            try:
+                r = self._call(ep, params, authless=True)
+                self.token = r["auth"]
+                log.info(f"✓ pCloud autenticado via {ep} (region={PCLOUD_REGION})")
+                return
+            except PCloudError as e:
+                last_err = e
+                continue
+        raise PCloudError(
+            f"Auth falló. Último error: {last_err}. "
+            f"Workaround: pre-cachea el token con PCLOUD_AUTH_TOKEN."
         )
-        self.token = r["auth"]
-        log.info(f"✓ pCloud autenticado (region={PCLOUD_REGION})")
 
     def _call(self, endpoint: str, params: dict | None = None, authless: bool = False) -> dict:
         p = dict(params or {})
