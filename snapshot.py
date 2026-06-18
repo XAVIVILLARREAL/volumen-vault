@@ -50,10 +50,10 @@ def load_env(path: Path = Path(".env")):
 
 load_env()
 
-PCLOUD_EMAIL = os.environ["PCLOUD_EMAIL"]
-PCLOUD_PASSWORD = os.environ["PCLOUD_PASSWORD"]
+PCLOUD_EMAIL = os.environ.get("PCLOUD_EMAIL", "")
+PCLOUD_PASSWORD = os.environ.get("PCLOUD_PASSWORD", "")
 PCLOUD_REGION = os.environ.get("PCLOUD_REGION", "us")
-PCLOUD_VAULT_FOLDER_ID = int(os.environ.get("PCLOUD_VAULT_FOLDER_ID", "0"))
+PCLOUD_VAULT_FOLDER_ID = int(os.environ.get("PCLOUD_VAULT_FOLDER_ID", "0") or "0")
 
 INCLUDE_PATTERN = re.compile(os.environ.get("INCLUDE_PATTERN", ".*"))
 EXCLUDE_PATTERN = re.compile(os.environ.get("EXCLUDE_PATTERN", r"^$"))
@@ -80,6 +80,8 @@ class PCloud:
         self.email = email
         self.password = password
         self.token: Optional[str] = None
+        if not email or not password:
+            raise PCloudError("PCLOUD_EMAIL y PCLOUD_PASSWORD son requeridos (env vars)")
         self._authenticate()
 
     def _authenticate(self):
