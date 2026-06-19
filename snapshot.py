@@ -126,7 +126,11 @@ class PCloud:
         return data
 
     def list_folder(self, folder_id: int = 0) -> list[dict]:
-        r = self._call("listfolder", {"folderid": folder_id, "recursive": "yes"})
+        params = {"recursive": "yes"}
+        # pCloud no acepta folderid=0; para root no pasar folderid
+        if folder_id and folder_id > 0:
+            params["folderid"] = folder_id
+        r = self._call("listfolder", params)
         return [
             {
                 "id": item.get("folderid") or item.get("fileid"),
@@ -140,11 +144,18 @@ class PCloud:
         ]
 
     def find_or_create_folder(self, name: str, parent_id: int) -> int:
-        existing = {f["name"]: f["id"] for f in self.list_folder(parent_id) if f["is_folder"]}
+        existing = {}
+        if parent_id and parent_id > 0:
+            existing = {f["name"]: f["id"] for f in self.list_folder(parent_id) if f["is_folder"]}
         if name in existing:
             return existing[name]
-        r = self._call("createfolder", {"name": name, "folderid": parent_id})
+        if parent_id and parent_id > 0:
+            r = self._call("createfolder", {"name": name, "folderid": parent_id})
+        else:
+            r = self._call("createfolder", {"name": name})
         return r["metadata"]["folderid"]
+
+
 
     def upload_file(self, local_path: Path, folder_id: int, rename: Optional[str] = None) -> dict:
         with open(local_path, "rb") as f:
