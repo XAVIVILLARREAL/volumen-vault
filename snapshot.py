@@ -126,11 +126,8 @@ class PCloud:
         return data
 
     def list_folder(self, folder_id: int = 0) -> list[dict]:
-        params = {"recursive": "yes"}
-        # pCloud no acepta folderid=0; para root no pasar folderid
-        if folder_id and folder_id > 0:
-            params["folderid"] = folder_id
-        r = self._call("listfolder", params)
+        # pCloud requiere folderid=0 explicito (no omitir el param)
+        r = self._call("listfolder", {"folderid": int(folder_id), "recursive": "yes"})
         return [
             {
                 "id": item.get("folderid") or item.get("fileid"),
@@ -144,16 +141,13 @@ class PCloud:
         ]
 
     def find_or_create_folder(self, name: str, parent_id: int) -> int:
-        existing = {}
-        if parent_id and parent_id > 0:
-            existing = {f["name"]: f["id"] for f in self.list_folder(parent_id) if f["is_folder"]}
-        if name in existing:
-            return existing[name]
-        if parent_id and parent_id > 0:
-            r = self._call("createfolder", {"name": name, "folderid": parent_id})
-        else:
-            r = self._call("createfolder", {"name": name})
-        return r["metadata"]["folderid"]
+        # Usar createfolderifnotexists (idempotente) — no falla si ya existe
+        r = self._call(
+            "createfolderifnotexists",
+            {"name": name, "folderid": int(parent_id)},
+        )
+        meta = r["metadata"]
+        return meta["folderid"]
 
 
 
